@@ -1,0 +1,14 @@
+﻿  raster.cpp
+E:\cs\C++\WM9M4\GameEngineering\GameEngineering\mesh.h(197,25): warning C4244: “初始化”: 从“double”转换到“float”，可能丢失数据
+  (编译源文件“raster.cpp”)
+  
+E:\cs\C++\WM9M4\GameEngineering\GameEngineering\mesh.h(202,27): warning C4244: “初始化”: 从“double”转换到“float”，可能丢失数据
+  (编译源文件“raster.cpp”)
+  
+E:\cs\C++\WM9M4\GameEngineering\GameEngineering\renderer.h(11,30): warning C4305: “初始化”: 从“double”到“float”截断
+  (编译源文件“raster.cpp”)
+  
+E:\cs\C++\WM9M4\GameEngineering\GameEngineering\raster.cpp(119,69): warning C4305: “参数”: 从“double”到“float”截断
+E:\cs\C++\WM9M4\GameEngineering\GameEngineering\raster.cpp(120,69): warning C4305: “参数”: 从“double”到“float”截断
+E:\cs\C++\WM9M4\GameEngineering\GameEngineering\raster.cpp(121,69): warning C4305: “参数”: 从“double”到“float”截断
+  GameEngineering.vcxproj -> E:\cs\C++\WM9M4\GameEngineering\x64\Debug\GameEngineering.exe

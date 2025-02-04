@@ -1,0 +1,46 @@
+﻿  raster.cpp
+E:\cs\C++\WM9M4\GameEngineering\GameEngineering\vec4.h(181,30): warning C4267: “初始化”: 从“size_t”转换到“int”，可能丢失数据
+  (编译源文件“raster.cpp”)
+  
+E:\cs\C++\WM9M4\GameEngineering\GameEngineering\vec4.h(192,21): warning C4267: “初始化”: 从“size_t”转换到“int”，可能丢失数据
+  (编译源文件“raster.cpp”)
+  
+E:\cs\C++\WM9M4\GameEngineering\GameEngineering\vec4.h(207,30): warning C4267: “初始化”: 从“size_t”转换到“int”，可能丢失数据
+  (编译源文件“raster.cpp”)
+  
+E:\cs\C++\WM9M4\GameEngineering\GameEngineering\vec4.h(219,21): warning C4267: “初始化”: 从“size_t”转换到“int”，可能丢失数据
+  (编译源文件“raster.cpp”)
+  
+E:\cs\C++\WM9M4\GameEngineering\GameEngineering\vec4.h(234,30): warning C4267: “初始化”: 从“size_t”转换到“int”，可能丢失数据
+  (编译源文件“raster.cpp”)
+  
+E:\cs\C++\WM9M4\GameEngineering\GameEngineering\vec4.h(246,21): warning C4267: “初始化”: 从“size_t”转换到“int”，可能丢失数据
+  (编译源文件“raster.cpp”)
+  
+E:\cs\C++\WM9M4\GameEngineering\GameEngineering\mesh.h(361,29): warning C4244: “初始化”: 从“double”转换到“float”，可能丢失数据
+  (编译源文件“raster.cpp”)
+  
+E:\cs\C++\WM9M4\GameEngineering\GameEngineering\mesh.h(366,31): warning C4244: “初始化”: 从“double”转换到“float”，可能丢失数据
+  (编译源文件“raster.cpp”)
+  
+E:\cs\C++\WM9M4\GameEngineering\GameEngineering\renderer.h(11,30): warning C4305: “初始化”: 从“double”到“float”截断
+  (编译源文件“raster.cpp”)
+  
+E:\cs\C++\WM9M4\GameEngineering\GameEngineering\triangle.h(122,29): warning C4267: “初始化”: 从“size_t”转换到“int”，可能丢失数据
+  (编译源文件“raster.cpp”)
+  
+E:\cs\C++\WM9M4\GameEngineering\GameEngineering\triangle.h(140,21): warning C4267: “初始化”: 从“size_t”转换到“int”，可能丢失数据
+  (编译源文件“raster.cpp”)
+  
+E:\cs\C++\WM9M4\GameEngineering\GameEngineering\raster.cpp(122,69): warning C4305: “参数”: 从“double”到“float”截断
+E:\cs\C++\WM9M4\GameEngineering\GameEngineering\raster.cpp(123,69): warning C4305: “参数”: 从“double”到“float”截断
+E:\cs\C++\WM9M4\GameEngineering\GameEngineering\raster.cpp(124,69): warning C4305: “参数”: 从“double”到“float”截断
+E:\cs\C++\WM9M4\GameEngineering\GameEngineering\raster.cpp(314,26): warning C4267: “初始化”: 从“size_t”转换到“int”，可能丢失数据
+E:\cs\C++\WM9M4\GameEngineering\GameEngineering\raster.cpp(333,17): warning C4267: “初始化”: 从“size_t”转换到“int”，可能丢失数据
+E:\cs\C++\WM9M4\GameEngineering\GameEngineering\raster.cpp(346,43): warning C4305: “初始化”: 从“double”到“float”截断
+  正在生成代码
+  3 of 1025 functions ( 0.3%) were compiled, the rest were copied from previous compilation.
+    0 functions were new in current compilation
+    1 functions had inline decision re-evaluated but remain unchanged
+  已完成代码的生成
+  GameEngineering.vcxproj -> E:\cs\C++\WM9M4\GameEngineering\x64\Release\GameEngineering.exe
