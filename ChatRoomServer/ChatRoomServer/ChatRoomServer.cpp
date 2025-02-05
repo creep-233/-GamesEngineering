@@ -92,6 +92,8 @@ std::string trim(const std::string& str) {
 
 
 
+
+//
 //void handleClient(SOCKET clientSocket) {
 //    char buffer[DEFAULT_BUFFER_SIZE] = { 0 };
 //    std::string clientName;
@@ -107,7 +109,6 @@ std::string trim(const std::string& str) {
 //            clientName = clientName.substr(9);
 //        }
 //
-//        // **存入用户列表**
 //        {
 //            std::lock_guard<std::mutex> lock(clientsMutex);
 //            clients[clientSocket] = clientName;
@@ -119,14 +120,12 @@ std::string trim(const std::string& str) {
 //        broadcastUserList();
 //        broadcastMessage("GroupChat " + clientName + " joined!\n", clientSocket);
 //
-//        // **存入群聊日志**
 //        {
 //            std::lock_guard<std::mutex> logLock(channelLogsMutex);
 //            channelLogs["Group Chat"].push_back("GroupChat " + clientName + " joined!");
 //        }
 //    }
 //
-//    // **监听消息**
 //    while (true) {
 //        memset(buffer, 0, DEFAULT_BUFFER_SIZE);
 //        int bytesReceived = recv(clientSocket, buffer, DEFAULT_BUFFER_SIZE - 1, 0);
@@ -140,11 +139,9 @@ std::string trim(const std::string& str) {
 //                clients.erase(clientSocket);
 //            }
 //
-//            // **通知所有用户**
 //            broadcastUserList();
 //            broadcastMessage("GroupChat " + clientName + " left.\n", clientSocket);
 //
-//            // **存入群聊日志**
 //            {
 //                std::lock_guard<std::mutex> logLock(channelLogsMutex);
 //                channelLogs["Group Chat"].push_back("GroupChat " + clientName + " left.");
@@ -155,10 +152,12 @@ std::string trim(const std::string& str) {
 //        buffer[bytesReceived] = '\0';
 //        std::string message(buffer);
 //
+//        message.erase(std::remove(message.begin(), message.end(), '\n'), message.end());
+//        message.erase(std::remove(message.begin(), message.end(), '\r'), message.end()); // 兼容 Windows \r\n
+//
 //        std::cout << "[DEBUG] Received message from " << clientName << ": " << message << std::endl;
 //
-//        // **处理私聊消息**
-//        if (message.rfind("DM:", 0) == 0) {
+//        if (message.rfind("DM:", 0  ) == 0) {
 //            size_t firstColon = message.find(':');
 //            size_t secondColon = message.find(':', firstColon + 1);
 //
@@ -166,67 +165,65 @@ std::string trim(const std::string& str) {
 //                std::string rawTargetUser = message.substr(firstColon + 1, secondColon - firstColon - 1);
 //                std::string privateMessage = message.substr(secondColon + 1);
 //
-//                // **修正目标用户名**
-//                std::string targetUser = rawTargetUser;
+//                // **清理 targetUser，防止格式错误**
+//                std::string targetUser = trim(rawTargetUser);
+//                //std::string targetUser = rawTargetUser;
+//
+//                targetUser.erase(std::remove(targetUser.begin(), targetUser.end(), '\n'), targetUser.end());
+//                targetUser.erase(std::remove(targetUser.begin(), targetUser.end(), '\r'), targetUser.end()); // 兼容 Windows \r\n
+//
+//                std::cout << "[DEBUG] Parsed targetUser: [" << targetUser << "] from message: [" << message << "]" << std::endl;
+//
+//
 //                targetUser.erase(0, targetUser.find_first_not_of(" "));
 //                targetUser.erase(targetUser.find_last_not_of(" ") + 1);
 //
+//
 //                if (targetUser.empty()) {
 //                    std::cout << "[ERROR] DM target user is empty: " << message << std::endl;
-//                    continue;
+//                    return;
 //                }
 //
-//                // **查找目标用户的 Socket**
+//                
 //                SOCKET targetSocket = INVALID_SOCKET;
 //                {
 //                    std::lock_guard<std::mutex> lock(clientsMutex);
 //                    auto it = std::find_if(clients.begin(), clients.end(),
-//                        [&targetUser](const auto& pair) {
-//                            return pair.second == targetUser;
-//                        });
+//                        [&targetUser](const auto& pair) { return pair.second == targetUser; });
 //                    if (it != clients.end()) {
 //                        targetSocket = it->first;
 //                    }
 //                }
 //
-//                // **构造私聊频道名称**
+//                std::cout << clientName << "； " << targetUser << std::endl;
+//
 //                std::string channelName = (clientName < targetUser)
 //                    ? "DM:" + clientName + "-" + targetUser
-//                    : "DM:" + targetUser + "-" + clientName;
+//                    : "DM:" + targetUser + "-" + clientName;    
+//
+//                //std::string channelName = "DM:" + targetUser;
+//
+//
 //
 //                // **存入私聊日志**
 //                {
 //                    std::lock_guard<std::mutex> logLock(channelLogsMutex);
 //                    channelLogs[channelName].push_back(clientName + ": " + privateMessage);
+//                    std::cout << "[DEBUG] Stored DM in log: " << channelName
+//                        << " | Message: " << clientName << ": " << privateMessage << std::endl;
 //                }
 //
-//                // **发送消息给目标用户和发送者**
-//                std::string formattedMessage = "DM:" + clientName + ":" + privateMessage;
-//
 //                if (targetSocket != INVALID_SOCKET) {
-//                    // 目标用户在线，发送消息
+//                    std::string formattedMessage = "DM:" + clientName + ":" + privateMessage;
 //                    if (send(targetSocket, formattedMessage.c_str(), formattedMessage.size(), 0) == SOCKET_ERROR) {
 //                        std::cerr << "[ERROR] Failed to send DM to " << targetUser << std::endl;
 //                    }
-//                    else {
-//                        std::cout << "[DEBUG] Sent DM to " << targetUser << ": " << formattedMessage << std::endl;
-//                    }
-//                }
-//                else {
-//                    // 目标用户不在线，仅存日志
-//                    std::cout << "[DEBUG] Target user not found: " << targetUser << ". Saved DM in log." << std::endl;
-//                }
-//
-//                // 给发送者发送确认消息
-//                if (send(clientSocket, formattedMessage.c_str(), formattedMessage.size(), 0) == SOCKET_ERROR) {
-//                    std::cerr << "[ERROR] Failed to send DM confirmation to sender." << std::endl;
 //                }
 //            }
 //            else {
-//                std::cout << "[ERROR] Invalid private message format: " << message << std::endl;
+//                std::cout << "[ERROR] Invalid DM format: " << message << std::endl;
 //            }
 //        }
-//        // **处理日志请求**
 //        else if (message.rfind("REQUEST_LOG:", 0) == 0) {
 //            std::string channel = message.substr(12);
 //
@@ -248,7 +245,6 @@ std::string trim(const std::string& str) {
 //                std::cout << "[DEBUG] Sent logs for channel: " << channel << std::endl;
 //            }
 //        }
-//        // **处理群聊消息**
 //        else {
 //            std::string fullMessage = "GroupChat " + clientName + ": " + message;
 //
@@ -257,9 +253,7 @@ std::string trim(const std::string& str) {
 //                channelLogs["Group Chat"].push_back(clientName + ": " + message);
 //            }
 //
-//            // **广播群聊消息**
-//            int sendResult = broadcastMessage(fullMessage, clientSocket);
-//            if (sendResult == SOCKET_ERROR) {
+//            if (broadcastMessage(fullMessage, clientSocket) == SOCKET_ERROR) {
 //                std::cerr << "[ERROR] Failed to broadcast group message!" << std::endl;
 //            }
 //            else {
@@ -333,34 +327,23 @@ void handleClient(SOCKET clientSocket) {
 
         std::cout << "[DEBUG] Received message from " << clientName << ": " << message << std::endl;
 
-        if (message.rfind("DM:", 0  ) == 0) {
+        // **私聊消息解析**
+        if (message.rfind("DM:", 0) == 0) {
             size_t firstColon = message.find(':');
             size_t secondColon = message.find(':', firstColon + 1);
 
             if (secondColon != std::string::npos) {
-                std::string rawTargetUser = message.substr(firstColon + 1, secondColon - firstColon - 1);
+                std::string targetUser = trim(message.substr(firstColon + 1, secondColon - firstColon - 1));
                 std::string privateMessage = message.substr(secondColon + 1);
-
-                // **清理 targetUser，防止格式错误**
-                std::string targetUser = trim(rawTargetUser);
-                //std::string targetUser = rawTargetUser;
-
-                targetUser.erase(std::remove(targetUser.begin(), targetUser.end(), '\n'), targetUser.end());
-                targetUser.erase(std::remove(targetUser.begin(), targetUser.end(), '\r'), targetUser.end()); // 兼容 Windows \r\n
 
                 std::cout << "[DEBUG] Parsed targetUser: [" << targetUser << "] from message: [" << message << "]" << std::endl;
 
-
-                targetUser.erase(0, targetUser.find_first_not_of(" "));
-                targetUser.erase(targetUser.find_last_not_of(" ") + 1);
-
-
-                if (targetUser.empty()) {
-                    std::cout << "[ERROR] DM target user is empty: " << message << std::endl;
+                if (targetUser.empty() || targetUser.find('-') != std::string::npos) {
+                    std::cerr << "[ERROR] Invalid private chat target user extracted: " << targetUser << std::endl;
                     return;
                 }
 
-                
+                // **查找 targetUser 的 SOCKET**
                 SOCKET targetSocket = INVALID_SOCKET;
                 {
                     std::lock_guard<std::mutex> lock(clientsMutex);
@@ -371,15 +354,10 @@ void handleClient(SOCKET clientSocket) {
                     }
                 }
 
-                std::cout << clientName << "； " << targetUser << std::endl;
-
+                // **生成私聊频道名称**
                 std::string channelName = (clientName < targetUser)
                     ? "DM:" + clientName + "-" + targetUser
-                    : "DM:" + targetUser + "-" + clientName;    
-
-                //std::string channelName = "DM:" + targetUser;
-
-
+                    : "DM:" + targetUser + "-" + clientName;
 
                 // **存入私聊日志**
                 {
@@ -389,17 +367,21 @@ void handleClient(SOCKET clientSocket) {
                         << " | Message: " << clientName << ": " << privateMessage << std::endl;
                 }
 
+                // **发送消息给目标用户**
                 if (targetSocket != INVALID_SOCKET) {
                     std::string formattedMessage = "DM:" + clientName + ":" + privateMessage;
-                    if (send(targetSocket, formattedMessage.c_str(), formattedMessage.size(), 0) == SOCKET_ERROR) {
-                        std::cerr << "[ERROR] Failed to send DM to " << targetUser << std::endl;
-                    }
+                    send(targetSocket, formattedMessage.c_str(), formattedMessage.size(), 0);
                 }
+
+                // **给自己返回消息**
+                std::string selfMessage = "DM:" + clientName + ":" + privateMessage;
+                send(clientSocket, selfMessage.c_str(), selfMessage.size(), 0);
             }
             else {
-                std::cout << "[ERROR] Invalid DM format: " << message << std::endl;
+                std::cerr << "[ERROR] Invalid DM format: " << message << std::endl;
             }
         }
+        // **请求聊天日志**
         else if (message.rfind("REQUEST_LOG:", 0) == 0) {
             std::string channel = message.substr(12);
 
@@ -421,6 +403,7 @@ void handleClient(SOCKET clientSocket) {
                 std::cout << "[DEBUG] Sent logs for channel: " << channel << std::endl;
             }
         }
+        // **群聊消息**
         else {
             std::string fullMessage = "GroupChat " + clientName + ": " + message;
 
@@ -438,6 +421,8 @@ void handleClient(SOCKET clientSocket) {
         }
     }
 }
+
+
 
 
 
