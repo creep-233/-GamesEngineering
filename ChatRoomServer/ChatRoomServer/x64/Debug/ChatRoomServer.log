@@ -1,0 +1,8 @@
+﻿  ChatRoomServer.cpp
+E:\cs\C++\WM9M4\ChatRoomServer\ChatRoomServer\ChatRoomServer.cpp(52,59): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
+E:\cs\C++\WM9M4\ChatRoomServer\ChatRoomServer\ChatRoomServer.cpp(74,74): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
+E:\cs\C++\WM9M4\ChatRoomServer\ChatRoomServer\ChatRoomServer.cpp(394,91): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
+E:\cs\C++\WM9M4\ChatRoomServer\ChatRoomServer\ChatRoomServer.cpp(417,65): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
+E:\cs\C++\WM9M4\ChatRoomServer\ChatRoomServer\ChatRoomServer.cpp(458,58): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
+E:\cs\C++\WM9M4\ChatRoomServer\ChatRoomServer\ChatRoomServer.cpp(459,59): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
+  ChatRoomServer.vcxproj -> E:\cs\C++\WM9M4\ChatRoomServer\x64\Debug\ChatRoomServer.exe
