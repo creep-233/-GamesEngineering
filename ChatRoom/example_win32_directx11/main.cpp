@@ -17,6 +17,7 @@
 #include <map>
 #include <mutex>
 #include <iostream>
+#include <unordered_set>
 #pragma comment(lib, "ws2_32.lib")
 
 
@@ -147,6 +148,13 @@ void initializeChatChannels() {
 //}
 
 
+std::string trim(const std::string& str) {
+    size_t first = str.find_first_not_of(" ");
+    size_t last = str.find_last_not_of(" ");
+    return (first == std::string::npos || last == std::string::npos) ? "" : str.substr(first, last - first + 1);
+}
+
+
 void onNewUserJoined(const std::string& newUser) {
     {
         std::lock_guard<std::mutex> lock(userListMutex);
@@ -168,6 +176,9 @@ void CleanupRenderTarget();
 LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 
+
+
+
 void receiveMessages(SOCKET clientSocket) {
     char buffer[DEFAULT_BUFFER_SIZE] = { 0 };
     std::string currentChannel; // 当前正在处理的频道
@@ -178,10 +189,10 @@ void receiveMessages(SOCKET clientSocket) {
         if (bytesReceived > 0) {
             buffer[bytesReceived] = '\0';
             std::string message(buffer);
-            std::cout << "[DEBUG] Received message: " << message << std::endl; // 添加调试日志
+            std::cout << "[DEBUG] Received message: " << message << std::endl; 
 
+            // 解析在线用户列表
             if (message.rfind("USERLIST:", 0) == 0) {
-                // 解析用户列表
                 {
                     std::lock_guard<std::mutex> lock(userListMutex);
                     user_list.clear();
@@ -210,74 +221,136 @@ void receiveMessages(SOCKET clientSocket) {
                 }
                 std::cout << std::endl;
             }
-            //else if (message.rfind("LOG_START:", 0) == 0) {
-            //    // 开始接收频道日志
-            //    currentChannel = message.substr(10); // 获取频道名称
-            //    std::lock_guard<std::mutex> lock(chatMutex);
-            //    chatLogs[currentChannel].clear(); // 清空当前频道的日志
-            //    isReceivingLog = true;
-            //}
-            //else if (message.rfind("LOG_END:", 0) == 0) {
-            //    // 日志接收结束
-            //    std::string endChannel = message.substr(8); // 获取结束的频道名称
-            //    if (endChannel == currentChannel) {
-            //        std::cout << "[DEBUG] 日志接收完成: " << currentChannel << std::endl;
-            //        isReceivingLog = false;
-            //        currentChannel.clear();
-            //    }
-            //}
-            //else if (isReceivingLog) {
-            //    // 正在接收日志，将消息存入当前频道
-            //    std::lock_guard<std::mutex> lock(chatMutex);
-            //    chatLogs[currentChannel].push_back(message);
-            //}
 
-
+            // 处理日志记录
             else if (message.rfind("LOG_START:", 0) == 0) {
                 currentChannel = message.substr(10); // 获取频道名称
                 std::lock_guard<std::mutex> lock(chatMutex);
                 chatLogs[currentChannel].clear(); // 清空当前频道日志
                 isReceivingLog = true;
+                std::cout << "[DEBUG] Start receiving logs for channel: " << currentChannel << std::endl;
             }
             else if (message.rfind("LOG_END:", 0) == 0) {
                 std::string endChannel = message.substr(8); // 获取结束频道名称
                 if (endChannel == currentChannel) {
                     isReceivingLog = false;
-                    std::cout << "[DEBUG] Log reception complete for channel: " << currentChannel << std::endl;
+                    std::cout << "[DEBUG] Finished receiving logs for channel: " << currentChannel << std::endl;
                 }
             }
             else if (isReceivingLog) {
                 // 将接收到的日志存入当前频道
                 std::lock_guard<std::mutex> lock(chatMutex);
                 chatLogs[currentChannel].push_back(message);
+
+                std::cout << "[DEBUG] Client storing log in [" << currentChannel << "]: " << message << std::endl;
             }
+
+            // **修正私聊消息解析**
+            //else if (message.rfind("DM:", 0) == 0) {
+            //    size_t firstColon = message.find(':', 3);
+            //    size_t secondColon = message.find(':', firstColon + 1);
+
+            //    if (firstColon != std::string::npos && secondColon != std::string::npos) {
+            //        std::string sender = message.substr(3, firstColon - 3);
+            //        std::string content = message.substr(secondColon + 1);
+            //        std::string targetUser = message.substr(firstColon + 1, secondColon - firstColon - 1);
+
+            //        // **修正 `content`，去掉 `DM:A-B:` 额外前缀**
+            //        if (content.rfind("DM:", 0) == 0) {
+            //            size_t thirdColon = content.find(':', 3);
+            //            if (thirdColon != std::string::npos) {
+            //                content = content.substr(thirdColon + 1);
+            //            }
+            //        }
+
+            //        std::string channelName = (sender < targetUser)
+            //            ?  "DM:" + sender + " - " + targetUser
+            //            :  "DM:" + targetUser + " - " + sender;
+
+            //        {
+            //            std::lock_guard<std::mutex> lock(chatMutex);
+            //            chatLogs[channelName].push_back(sender + ": " + content);
+            //        }
+
+            //        std::cout << "[DEBUG] Stored DM in chatLogs[" << channelName << "]: " << sender << ": " << content << std::endl;
+            //    }
+            //    else {
+            //        std::cout << "[ERROR] Invalid DM format: " << message << std::endl;
+            //    }
+            //}
+
 
             else if (message.rfind("DM:", 0) == 0) {
-                // 处理私聊消息
-                size_t firstColon = message.find(':', 3);
-                size_t secondColon = message.find(':', firstColon + 1);
+                //size_t firstColon = message.find(':');
+                //size_t secondColon = message.find(':', firstColon + 1);
+                //size_t thirdColon = message.find(':', secondColon + 1);
 
-                if (firstColon != std::string::npos && secondColon != std::string::npos) {
-                    std::string sender = message.substr(3, firstColon - 3);
-                    std::string content = message.substr(secondColon + 1);
-                    std::string targetUser = message.substr(firstColon + 1, secondColon - firstColon - 1);
+                //std::cout << "[DEBUG] Parsing DM message: " << message << std::endl;
+                //std::cout << "[DEBUG] Found positions - firstColon: " << firstColon
+                //    << ", secondColon: " << secondColon
+                //    << ", thirdColon: " << thirdColon << std::endl;
 
-                    // 确保频道名称与服务器逻辑一致
-                    std::string channelName = "DM:" + sender + "-" + targetUser;
-                    if (sender > targetUser) {
-                        channelName = "DM:" + targetUser + "-" + sender;
+                //if (firstColon != std::string::npos && secondColon != std::string::npos && thirdColon != std::string::npos) {
+                //    std::string sender = trim(message.substr(3, firstColon - 3));
+                //    std::string targetUser = trim(message.substr(firstColon + 1, secondColon - firstColon - 1));
+                //    std::string privateMessage = message.substr(thirdColon + 1);
+
+
+                //    //sender = trim(sender);
+                //    //targetUser = trim(targetUser);
+                //    //privateMessage = trim(privateMessage);
+
+                    size_t firstColon = message.find(':');
+                    size_t dash = message.find('-', firstColon + 1); // 查找 `-`
+                    size_t secondColon = message.find(':', dash + 1); // 查找第二个冒号
+
+
+                    std::cout << "[DEBUG] Parsing DM message: " << message << std::endl;
+                    std::cout << "[DEBUG] Found positions - firstColon: " << firstColon
+                        << ", dash: " << dash
+                        << ", secondColon: " << secondColon << std::endl;
+
+                    if (firstColon != std::string::npos && dash != std::string::npos && secondColon != std::string::npos && dash < secondColon) {
+                        // 解析 sender, receiver 和 privateMessage
+                        std::string sender = trim(message.substr(firstColon + 1, dash - firstColon - 1));
+                        std::string targetUser = trim(message.substr(dash + 1, secondColon - dash - 1));
+                        std::string privateMessage = message.substr(secondColon + 1);
+
+                        // 去除 targetUser 的换行符和空格
+                        targetUser.erase(std::remove(targetUser.begin(), targetUser.end(), '\n'), targetUser.end());
+                        targetUser.erase(std::remove(targetUser.begin(), targetUser.end(), '\r'), targetUser.end());
+                        targetUser.erase(0, targetUser.find_first_not_of(" "));
+                        targetUser.erase(targetUser.find_last_not_of(" ") + 1);
+
+
+                    // 确定频道名称
+                    std::string channelName = (sender < targetUser) ? (sender + " - " + targetUser) : (targetUser + " - " + sender);
+
+                    std::cout << "[DEBUG] Parsed DM -> Sender: " << sender
+                        << ", Target: " << targetUser
+                        << ", Message: " << privateMessage
+                        << ", Channel: " << channelName << std::endl;
+
+
+                    // 存储到本地日志
+                    std::lock_guard<std::mutex> lock(chatMutex);
+                    chatLogs[channelName].push_back(sender + ": " + privateMessage);
+
+                    std::cout << "[DEBUG] Stored DM in local chatLogs[" << channelName << "]: " << sender << ": " << privateMessage << std::endl;
+
+                    std::cout << "[DEBUG] Current chatLogs[" << channelName << "] contents:" << std::endl;
+                    for (const auto& msg : chatLogs[channelName]) {
+                        std::cout << "[DEBUG] " << msg << std::endl;
                     }
-
-                    {
-                        std::lock_guard<std::mutex> lock(chatMutex);
-                        chatLogs[channelName].push_back(sender + ": " + content);
-                    }
-
-                    std::cout << "[DEBUG] Received DM from " << sender << " to " << targetUser << ": " << content << std::endl;
+                }
+                else {
+                    std::cout << "[ERROR] Invalid DM format received: " << message << std::endl;
                 }
             }
+
+
+            // 处理群聊消息
             else {
-                // 处理群聊消息
                 std::lock_guard<std::mutex> lock(chatMutex);
                 chatLogs["Group Chat"].push_back(message);
             }
@@ -303,8 +376,36 @@ void receiveMessages(SOCKET clientSocket) {
 //        fullMessage = message;
 //    }
 //    else if (isDirectMessage) {
-//        // 直接发送私聊格式消息
-//        fullMessage = message;
+//        // **修正私聊目标用户名**
+//        std::string targetUser;
+//        size_t separator = currentChannel.find('-');
+//
+//        if (separator != std::string::npos) {
+//            std::string userA = currentChannel.substr(0, separator);
+//            std::string userB = currentChannel.substr(separator + 2);
+//
+//            // **去除多余空格**
+//            userA.erase(0, userA.find_first_not_of(" "));
+//            userB.erase(0, userB.find_first_not_of(" "));
+//            userA.erase(userA.find_last_not_of(" ") + 1);
+//            userB.erase(userB.find_last_not_of(" ") + 1);
+//
+//            if (!userA.empty() && !userB.empty()) {
+//                // 确定目标用户
+//                targetUser = (username == userA) ? userB : userA;
+//            }
+//        }
+//
+//        // **防止 targetUser 为空**
+//        if (targetUser.empty()) {
+//            std::cerr << "[ERROR] Invalid private chat target user." << std::endl;
+//            return;
+//        }
+//
+//        // **组装私聊消息**
+//        fullMessage = "DM:" + targetUser + ":" + message;
+//
+//        //fullMessage = message;
 //    }
 //    else {
 //        // 默认情况（群聊）
@@ -325,11 +426,9 @@ void sendMessage(SOCKET clientSocket, const std::string& message, bool isUsernam
     std::string fullMessage;
 
     if (isUsername) {
-        // 发送用户名
         fullMessage = message;
     }
     else if (isDirectMessage) {
-        // **修正私聊目标用户名**
         std::string targetUser;
         size_t separator = currentChannel.find('-');
 
@@ -344,24 +443,26 @@ void sendMessage(SOCKET clientSocket, const std::string& message, bool isUsernam
             userB.erase(userB.find_last_not_of(" ") + 1);
 
             if (!userA.empty() && !userB.empty()) {
-                // 确定目标用户
                 targetUser = (username == userA) ? userB : userA;
             }
         }
 
-        // **防止 targetUser 为空**
         if (targetUser.empty()) {
             std::cerr << "[ERROR] Invalid private chat target user." << std::endl;
             return;
         }
 
-        // **组装私聊消息**
-        fullMessage = "DM:" + targetUser + ":" + message;
+        targetUser.erase(std::remove(targetUser.begin(), targetUser.end(), '\n'), targetUser.end());
+        targetUser.erase(std::remove(targetUser.end(), targetUser.end(), '\r'), targetUser.end());
+        targetUser.erase(0, targetUser.find_first_not_of(" "));
+        targetUser.erase(targetUser.find_last_not_of(" ") + 1);
 
-        //fullMessage = message;
+        // **正确格式化私聊消息**
+        fullMessage = message;
+
+        std::cout << username << ";" << targetUser << ";" << message;
     }
     else {
-        // 默认情况（群聊）
         fullMessage = username + ": " + message;
     }
 
@@ -376,6 +477,28 @@ void sendMessage(SOCKET clientSocket, const std::string& message, bool isUsernam
 
 
 
+
+
+
+void sendDirectMessage(const std::string& sender, const std::string& targetUser, const std::string& message) {
+    std::string formattedMessage = "DM:" + sender + ":" + targetUser + ":" + message;
+
+    // 发送到服务器
+    int result = send(clientSocket, formattedMessage.c_str(), formattedMessage.size(), 0);
+    if (result == SOCKET_ERROR) {
+        std::cerr << "[ERROR] Failed to send direct message: " << WSAGetLastError() << std::endl;
+    }
+    else {
+        std::cout << "[DEBUG] Sent DM to server: " << formattedMessage << std::endl;
+
+        // 更新本地日志
+        std::string channelName = (sender < targetUser) ? ("DM:" + sender + " - " + targetUser) : ("DM:" + targetUser + " - " + sender);
+        std::lock_guard<std::mutex> lock(chatMutex);
+        chatLogs[channelName].push_back("Me: " + message);
+
+        std::cout << "[DEBUG] Stored DM in local chatLogs[" << channelName << "]: " << message << std::endl;
+    }
+}
 
 
 
@@ -535,11 +658,36 @@ int main(int, char**)
                 currentChannel = channel; // 切换频道
                 std::cout << "[DEBUG] Switched to channel: " << currentChannel << std::endl;
 
-                // 请求服务器发送该频道的日志
-                std::string requestMessage = "REQUEST_LOG:" + currentChannel;
-                sendMessage(clientSocket, requestMessage);
+                currentChannel.erase(std::remove(currentChannel.begin(), currentChannel.end(), '\n'), currentChannel.end());
+                currentChannel.erase(std::remove(currentChannel.begin(), currentChannel.end(), '\r'), currentChannel.end());
 
-                std::cout << "[DEBUG] Sent log request for channel: " << currentChannel << std::endl;
+                std::cout << "[DEBUG] Checking ALL chatLogs[" << currentChannel << "]:\n";
+                if (chatLogs.find(currentChannel) != chatLogs.end()) {
+                    for (const auto& msg : chatLogs[currentChannel]) {
+                        std::cout << "[DEBUG] Message: " << msg << std::endl;
+                    }
+                }
+                else {
+                    std::cout << "[DEBUG] chatLogs[" << currentChannel << "] NOT FOUND!\n";
+                }
+
+
+                std::cout << "[DEBUG] Current selected channel: " << currentChannel << std::endl;
+                std::cout << "[DEBUG] Checking chatLogs keys:\n";
+                std::unordered_set<std::string> keys;
+                for (const auto& pair : chatLogs) {
+                    if (keys.find(pair.first) != keys.end()) {
+                        std::cout << "[ERROR] chatLogs key DUPLICATED: " << pair.first << std::endl;
+                    }
+                    keys.insert(pair.first);
+                }
+
+
+                // 请求服务器发送该频道的日志
+                //std::string requestMessage = "REQUEST_LOG:" + currentChannel;
+                //sendMessage(clientSocket, requestMessage);
+
+                //std::cout << "[DEBUG] Sent log request for channel: " << currentChannel << std::endl;
             }
         }
 
@@ -581,14 +729,30 @@ int main(int, char**)
             ImGui::Separator();
 
             // 显示当前频道的聊天记录
+            //ImGui::BeginChild("ChatMessages", ImVec2(0, -ImGui::GetFrameHeightWithSpacing()));
+            //{
+            //    std::lock_guard<std::mutex> lock(chatMutex);
+            //    for (const auto& message : chatLogs[currentChannel]) {
+            //        ImGui::TextWrapped("%s", message.c_str());
+
+            //        // 调试输出
+            //        //std::cout << "[DEBUG] Loaded message in channel " << currentChannel << ": " << message << std::endl;
+            //    }
+            //}   
+            //ImGui::EndChild();
+
             ImGui::BeginChild("ChatMessages", ImVec2(0, -ImGui::GetFrameHeightWithSpacing()));
             {
                 std::lock_guard<std::mutex> lock(chatMutex);
-                for (const auto& message : chatLogs[currentChannel]) {
-                    ImGui::TextWrapped("%s", message.c_str());
 
-                    // 调试输出
-                    std::cout << "[DEBUG] Loaded message in channel " << currentChannel << ": " << message << std::endl;
+                if (chatLogs.find(currentChannel) == chatLogs.end()) {
+                    //std::cout << "[DEBUG] chatLogs[" << currentChannel << "] NOT FOUND!" << std::endl;
+                }
+                else {
+                    for (const auto& message : chatLogs[currentChannel]) {
+                        ImGui::TextWrapped("%s", message.c_str());
+                        //std::cout << "[DEBUG] Displaying Message in " << currentChannel << ": " << message << std::endl;
+                    }
                 }
             }
             ImGui::EndChild();
